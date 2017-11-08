@@ -1,0 +1,6 @@
+name: Media entity Bulk Uploader
+description: Bulk upload image files to create media entities
+package: Custom
+type: module
+version: 1.0
+core: 8.x

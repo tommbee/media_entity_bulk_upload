@@ -2,57 +2,68 @@
 
 namespace Drupal\media_entity_bulk_upload\Form;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\media_entity_bulk_upload\Repo\TaxonomyRepo;
+use \Drupal\media_entity_bulk_upload\Services\ZipUploadService;
+use Drupal\file\Entity\File;
 
 class BulkForm extends ConfigFormBase {
 
-	public function getFormId()
-	{
-		return 'media_entity_bulk_upload_form';
-	}
+  /**
+   * The upload service.
+   *
+   * @var \Drupal\media_entity_bulk_upload\Services\ZipUploadService
+   */
+  protected $upload_service;
 
-	protected function getEditableConfigNames()
-	{
-	    return [
-	      'media_entity_bulk_upload.settings',
-	    ];
-	  }
+  public function __construct(ConfigFactoryInterface $config_factory, ZipUploadService $upload_service) {
+    $this->setConfigFactory($config_factory);
+    $this->$upload_service = $upload_service;
+  }
 
-	public function buildForm(array $form, FormStateInterface $form_state)
-	{
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get(['config.factory']),
+      $container->get(['media_entity_bulk_upload.bulk_upload']),
+    );
+  }
 
-		$form = parent::buildForm($form, $form_state);
+  public function getFormId() {
+    return 'media_entity_bulk_upload_form';
+  }
 
-		$form['tid'] = array(
-	      '#type' => 'select',
-	      '#title' => $this->t('Folder'),
-	      '#description' => $this->t('The foler to save in drupal of image'),
-	      '#empty_option' => sprintf('- %s -', $this->t('Please select')),
-	      '#required' => TRUE,
-	      '#options' => TaxonomyRepo::GetFolders(),
-	    );
+  protected function getEditableConfigNames() {
+    return [
+      'media_entity_bulk_upload.settings',
+    ];
+  }
 
-		$form['path'] = array(
-	      '#type' => 'textfield',
-	      '#title' => $this->t('Path'),
-	      '#default_value' => "/upload",
-	      '#description' => $this->t('The local path to look for images in')
-	    );
+  public function buildForm(array $form, FormStateInterface $form_state) {
+    $form = parent::buildForm($form, $form_state);
+    $form['zip'] = array(
+        '#type' => 'managed_file',
+        '#title' => t('Upload Zip File'),
+        '#upload_location' => 'temporary://bulk_upload/',
+        '#description' => t('The zip file containing image files')
+        ),
+    );
+    return $form;
+  }
 
-	    return $form;
-	}
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    $fid = $form_state->getValue(['zip', 0]);
+    if (!empty($fid)) {
+      $file = File::load($fid);
+      $this->upload_service->Upload($file->getFilename());
+      // $file = File::load($fid);
+      // $file->setPermanent();
+      // $file->save();
+    }
+    parent::submitForm($form, $form_state);
+  }
 
-	public function submitForm(array &$form, FormStateInterface $form_state)
-	{
-		$upload_service = \Drupal::service('media_entity_bulk_upload.bulk_upload');
-
-		$upload_service->setPath($form_state->getValue('path'));
-		$upload_service->setTid($form_state->getValue('tid'));
-
-		$upload_service->Start();
-
-	    parent::submitForm($form, $form_state);
-  	}
 }

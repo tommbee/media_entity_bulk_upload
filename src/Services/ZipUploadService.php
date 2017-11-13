@@ -4,82 +4,63 @@ namespace Drupal\media_entity_bulk_upload\Services;
 
 use Drupal\file\Entity\File;
 use Drupal\media_entity\Entity\Media;
-use \Drupal\Core\File\FileSystem\FileSystemInterface;
-use \Drupal\Archiver\Zip;
+use Drupal\Core\File\FileSystem;
+use Drupal\Core\Archiver\ArchiverManager;
+use Drupal\Core\Language\LanguageDefault;
 
 class ZipUploadService {
 
 	protected $fileSystem;
 
+	protected $archiver;
+
+	protected $zip_file;
+
 	protected $unzipped;
 
-	function __construct(FileSystemInterface $file_system) {
-		$this->$fileSystem = $file_system;
+	protected $language;
+
+	function __construct(FileSystem $file_system, ArchiverManager $archiver, LanguageDefault $language) {
+		$this->fileSystem = $file_system;
+		$this->archiver = $archiver;
+		$this->language = $language;
 	}
 
-	protected getTempPath() {
-		return file_directory_temp();
+	protected function Unzip() {
+		$zip = $this->archiver->getInstance(['filepath' => $this->zip_file]);
+		$success = $zip->extract($this->unzipped);
 	}
 
-	// protected getPublicPath() {
-	// 	return $this->$fileSystem->realpath(file_default_scheme() . "://");
-	// }
-
-	protected function Unzip($zip_file) {
-		$this->unzipped = $this->getTempPath() . date('Y-m-d-H-m-s');
-		Zip::extract($this->unzipped , $this->getTempPath() . $zip_file);
-	}
-
-	public function Upload($zip_file) {
-		$this->Unzip($zip_file);
-		$upload_path = DRUPAL_ROOT . $this->path;
+	public function Upload($base_path, $zip_file, $bundle, $field) {
+		$uploaded_files = array();
+		$this->zip_file = $this->fileSystem->realpath($zip_file->getFileUri());
+		$this->unzipped = $this->fileSystem->realpath($base_path . date('Y-m-d-H-m-s'));
+		$this->Unzip();
 		$dir_r = new \DirectoryIterator($this->unzipped);
 		foreach ($dir_r as $fileinfo) {
-
+			if (!$fileinfo->isDot()) {
+				$file_name = $fileinfo->getFilename();
+				$handle = fopen($fileinfo->getPathname(), 'r');
+				$file = file_save_data($handle, 'public://' . $file_name);
+				fclose($handle);
+				if($file !== FALSE) {
+					$image_media = Media::create([
+			      'bundle' => $bundle,
+			      'uid' => \Drupal::currentUser()->id(),
+			      'langcode' => $this->language->get()->getId(),
+			      'status' => Media::PUBLISHED,
+			      $field => [
+			        'target_id' => $file->id(),
+			        'alt' => $file_name
+			      ]
+			    ]);
+			    $image_media->save();
+			    array_push($uploaded_files, $image_media);
+				}
+			}
 		}
+		file_unmanaged_delete_recursive($base_path);
+		return $uploaded_files;
 	}
-
-
-
-
-
-
-	// public function Upload() {
-	// 	$upload_path = DRUPAL_ROOT . $this->path;
-	// 	$intended_place = $this->getPublicPath();
-	// 	$dir_r = new \DirectoryIterator($upload_path);
-	// 	foreach ($dir_r as $fileinfo) {
-	// 	    if (!$fileinfo->isDot()) {
-	// 	    	$file_name = $fileinfo->getFilename();
-	// 	    	$alt = $file_name;
-	// 	    	if(file_exists($intended_place . $file_name)) {
-	// 	    		do {
-	//       				$file_name = date('Y-m-d-H-m-s') . '_' . $file_name;
-	// 				} while(file_exists($intended_place . $file_name));
-	// 	    	}
-	// 	    	$file = File::create([
-	// 			  'uid' => 1,
-	// 			  'filename' => $file_name,
-	// 			  'uri' => 'public://' . $file_name,
-	// 			  'status' => 1,
-	// 			]);
-	// 			$dir = drupal_realpath($file->getFileUri());
-	// 			copy($fileinfo->getpathName(), $dir);
-	// 			$file->save();
-	// 			$image_media = Media::create([
-	// 		      'bundle' => 'image',
-	// 		      'uid' => '1',
-	// 		      'langcode' => 'en',
-	// 		      'status' => Media::PUBLISHED,
-	// 		      'field_image' => [
-	// 		        'target_id' => $file->id(),
-	// 		        'alt' => $alt
-	// 		      ]
-	// 		    ]);
-	// 		    $image_media->save();
-	// 	    }
-	// 	}
-
-	// }
 
 }

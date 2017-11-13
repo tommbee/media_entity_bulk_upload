@@ -2,14 +2,20 @@
 
 namespace Drupal\media_entity_bulk_upload\Utility;
 
+/**
+ * Helper class to grab media field information.
+ */
 class FieldUtility {
 
-  public static function GetMediaFieldBundles() {
+  /**
+   * Get media entity bundles.
+   */
+  public static function getMediaFieldBundles() {
     $field_map = \Drupal::entityManager()->getFieldMap();
     $media_field_map = $field_map['media'];
-    $bundle_array = array();
+    $bundle_array = [];
     foreach ($media_field_map as $field_key => $field) {
-      if(isset($field['bundles'])) {
+      if (isset($field['bundles'])) {
         foreach ($field['bundles'] as $bundle_name) {
           $bundle_array[$bundle_name] = $bundle_name;
         }
@@ -18,12 +24,15 @@ class FieldUtility {
     return $bundle_array;
   }
 
-  public static function GetMediaImageFields() {
+  /**
+   * Get all possible media entity image fields.
+   */
+  public static function getMediaImageFields() {
     $field_map = \Drupal::entityManager()->getFieldMap();
     $media_field_map = $field_map['media'];
-    $field_array = array();
+    $field_array = [];
     foreach ($media_field_map as $field_key => $field) {
-      if(isset($field['type']) && $field['type'] === "image" && $field_key !== "thumbnail") {
+      if (isset($field['type']) && $field['type'] === "image" && $field_key !== "thumbnail") {
         $field_array[$field_key] = $field_key;
       }
     }

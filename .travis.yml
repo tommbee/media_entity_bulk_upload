@@ -1,51 +1,74 @@
+# @file
+# .travis.yml - Drupal for Travis CI Integration
+#
+# Template provided by https://github.com/LionsAd/drupal_ti.
+#
+# Based for simpletest upon:
+#   https://github.com/sonnym/travis-ci-drupal-module-example
+
 language: php
 
-php:
-  - 5.3
-  - 5.4
-  - 5.5
-  - 5.6
-  - hhvm
+sudo: false
 
-matrix:
-  fast_finish: true
-  allow_failures:
-    - php: hhvm
+php:
+  - 7
+
+env:
+  global:
+    # add composer's global bin directory to the path
+    # see: https://github.com/drush-ops/drush#install---composer
+    - PATH="$PATH:$HOME/.composer/vendor/bin"
+
+    # Configuration variables.
+    - DRUPAL_TI_MODULE_NAME="media_entity_bulk_upload"
+    - DRUPAL_TI_SIMPLETEST_GROUP="media_entity_bulk_upload"
+
+    # Define runners and environment vars to include before and after the
+    # main runners / environment vars.
+    #- DRUPAL_TI_SCRIPT_DIR_BEFORE="./drupal_ti/before"
+    #- DRUPAL_TI_SCRIPT_DIR_AFTER="./drupal_ti/after"
+
+    # The environment to use, supported are: drupal-7, drupal-8
+    - DRUPAL_TI_ENVIRONMENT="drupal-8"
+
+    # The installation profile to use:
+    #- DRUPAL_TI_INSTALL_PROFILE="testing"
+
+    # Drupal specific variables.
+    - DRUPAL_TI_DB="drupal_travis_db"
+    - DRUPAL_TI_DB_URL="mysql://root:@127.0.0.1/drupal_travis_db"
+    # Note: Do not add a trailing slash here.
+    - DRUPAL_TI_WEBSERVER_URL="http://127.0.0.1"
+    - DRUPAL_TI_WEBSERVER_PORT="8080"
+
+    # Simpletest specific commandline arguments, the DRUPAL_TI_SIMPLETEST_GROUP is appended at the end.
+    - DRUPAL_TI_SIMPLETEST_ARGS="--verbose --color --concurrency 4 --url $DRUPAL_TI_WEBSERVER_URL:$DRUPAL_TI_WEBSERVER_PORT"
+
+  matrix:
+    - DRUPAL_TI_RUNNERS="simpletest"
 
 mysql:
-  database: media_entity_bulk_upload
+  database: drupal_travis_db
   username: root
   encoding: utf8
 
 before_install:
-  - sudo apt-get update > /dev/null
+  - composer self-update
+  - composer global require "lionsad/drupal_ti:1.*"
+  - drupal-ti before_install
 
 install:
-  # install php packages required for running a web server from drush on php 5.3
-  - sudo apt-get install -y --force-yes php5-cgi php5-mysql
-
-  # add composer's global bin directory to the path
-  # see: https://github.com/drush-ops/drush#install---composer
-  - export PATH="$HOME/.composer/vendor/bin:$PATH"
-
-  # install drush globally
-  - composer global require drush/drush:6.*
+  - drupal-ti install
 
 before_script:
-  # navigate out of module directory to prevent blown stack by recursive module lookup
-  - cd ../..
+  - drupal-ti before_script
 
-  # create new site, stubbing sendmail path with true to prevent delivery errors and manually resolving drush path
-  - mysql -e 'create database media_entity_bulk_upload'
-  - php -d sendmail_path=`which true` ~/.composer/vendor/bin/drush.php --yes core-quick-drupal --profile=testing --no-server --db-url=mysql://root:@127.0.0.1/media_entity_bulk_upload --enable=simpletest media_entity_bulk_upload
+script:
+  - drupal-ti script
 
-  # reference and enable travis_ci_drupal_module_example in build site
-  - ln -s $(readlink -e $(cd -)) media_entity_bulk_upload/drupal/sites/all/modules/travis_ci_drupal_module_example
-  - cd media_entity_bulk_upload/drupal
-  - drush --yes pm-enable travis_ci_drupal_module_example
+after_script:
+  - drupal-ti after_script
 
-  # start a web server on port 8080, run in the background; wait for initialization
-  - drush runserver 127.0.0.1:8080 &
-  - until netstat -an 2>/dev/null | grep '8080.*LISTEN'; do true; done
-
-script: drush test-run 'Travis-CI Drupal Module Example' --uri=http://127.0.0.1:8080
+notifications:
+  email:
+    false

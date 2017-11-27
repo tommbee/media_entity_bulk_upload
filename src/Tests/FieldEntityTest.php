@@ -11,10 +11,10 @@ use Drupal\media_entity_bulk_upload\Utility\FieldUtility;
 use Drupal\simpletest\WebTestBase;
 
 /**
- * Provides automated tests for the mespronos module.
- * @group mespronos
+ * Provides automated tests for the media_entity_bulk_upload module.
+ * @group media_entity_bulk_upload
  */
-class MespronosBetPointsTest extends WebTestBase {
+class FieldEntityTest extends WebTestBase {
 
 	/**
 	 * {@inheritdoc}
@@ -31,7 +31,7 @@ class MespronosBetPointsTest extends WebTestBase {
 		'media_entity_bulk_upload',
 	);
 
-	public function testBettingsPointsOnTeam2Winning() {
+	public function testMediaFieldBundles() {
 		$bundles = FieldUtility::getMediaFieldBundles();
 		$this->assertTrue(is_array($bundles));
 	}

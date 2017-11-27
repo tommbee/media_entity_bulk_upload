@@ -1,113 +1,103 @@
 <?php
 
-namespace Drupal\media_entity_bulk_upload\Services;
+namespace Drupal\media_entity_bulk_upload\Form;
 
-use Drupal\Core\Archiver\ArchiverManager;
-use Drupal\Core\File\FileSystem;
-use Drupal\Core\Language\LanguageDefault;
+use Drupal\Core\Form\FormBase;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\file\Entity\File;
-use Drupal\media\Entity\Media;
+use Drupal\media_entity_bulk_upload\Services\ZipUploadService;
+use Drupal\media_entity_bulk_upload\Utility\FieldUtility;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * A service to unpack the .zip file and create media entities.
+ * Upload form to render UI.
  */
-class ZipUploadService {
+class BulkForm extends FormBase {
 
 	/**
-	 * The Drupal File System.
+	 * The upload service.
 	 *
-	 * @var \Drupal\Core\File\FileSystem
+	 * @var \Drupal\media_entity_bulk_upload\Services\ZipUploadService
 	 */
-	protected $fileSystem;
-
-	/**
-	 * The Archive Manager to handle .zip files.
-	 *
-	 * @var \Drupal\Core\Archiver\ArchiverManager
-	 */
-	protected $archiver;
-
-	/**
-	 * The uploaded zip file from the form.
-	 *
-	 * @var \Drupal\file\Entity\File
-	 */
-	protected $zipFile;
-
-	/**
-	 * The directory of the unzipped file.
-	 *
-	 * @var string
-	 */
-	protected $unzipped;
-
-	/**
-	 * This Drupals instance default language.
-	 *
-	 * @var \Drupal\Core\Language\LanguageDefault
-	 */
-	protected $language;
+	protected $uploadService;
 
 	/**
 	 * Constructor.
 	 */
-	public function __construct(FileSystem $file_system, ArchiverManager $archiver, LanguageDefault $language) {
-		$this->fileSystem = $file_system;
-		$this->archiver = $archiver;
-		$this->language = $language;
+	public function __construct(ZipUploadService $uploadService) {
+		$this->uploadService = $uploadService;
 	}
 
 	/**
-	 * Unzipping handler to extract images.
+	 * {@inheritdoc}
 	 */
-	protected function unzip() {
-		$zip = $this->archiver->getInstance(['filepath' => $this->zipFile]);
-		$success = $zip->extract($this->unzipped);
+	public static function create(ContainerInterface $container) {
+		return new static(
+			$container->get('media_entity_bulk_upload.bulk_upload')
+		);
 	}
 
 	/**
-	 * Upload handler.
-	 *
-	 * @param string $base_path
-	 *   The temp directory base path.
-	 * @param \Drupal\file\Entity\File $zipFile
-	 *   The uploaded .zip file.
-	 * @param string $bundle
-	 *   The media entities intended bundle.
-	 * @param string $field
-	 *   The media entities image field.
+	 * {@inheritdoc}
 	 */
-	public function uploadMedia($base_path, File $zipFile, $bundle, $field) {
-		$uploaded_files = [];
-		$this->zipFile = $this->fileSystem->realpath($zipFile->getFileUri());
-		$this->unzipped = $this->fileSystem->realpath($base_path . date('Y-m-d-H-m-s'));
-		$this->unzip();
-		$dir_r = new \DirectoryIterator($this->unzipped);
-		foreach ($dir_r as $fileinfo) {
-			if (!$fileinfo->isDot()) {
-				$file_name = $fileinfo->getFilename();
-				$handle = fopen($fileinfo->getPathname(), 'r');
-				$file = file_save_data($handle, 'public://' . $file_name);
-				fclose($handle);
-				if ($file !== FALSE) {
-					$image_media = Media::create([
-						'bundle' => $bundle,
-						'uid' => \Drupal::currentUser()->id(),
-						'langcode' => $this->language->get()->getId(),
-						'published' => TRUE,
-						//'status' => Media::PUBLISHED,
-						$field => [
-							'target_id' => $file->id(),
-							'alt' => $file_name,
-						],
-					]);
-					$image_media->save();
-					array_push($uploaded_files, $image_media);
-				}
+	public function getFormId() {
+		return 'media_entity_bulk_upload_form';
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function buildForm(array $form, FormStateInterface $form_state) {
+		$form['target_field'] = [
+			'#type' => 'select',
+			'#title' => $this->t('Field'),
+			'#description' => $this->t('The target image field of your media entitiy'),
+			'#empty_option' => sprintf('- %s -', $this->t('Please select')),
+			'#required' => TRUE,
+			'#options' => FieldUtility::getMediaImageFields(),
+		];
+		$form['target_bundle'] = [
+			'#type' => 'select',
+			'#title' => $this->t('Bundle'),
+			'#description' => $this->t('The target media bundle of your entity'),
+			'#empty_option' => sprintf('- %s -', $this->t('Please select')),
+			'#required' => TRUE,
+			'#options' => FieldUtility::getMediaFieldBundles(),
+		];
+		$form['zip'] = [
+			'#type' => 'managed_file',
+			'#title' => t('Upload Zip File'),
+			'#upload_location' => 'temporary://' . $this->getFormId() . '/',
+			'#description' => t('The .ZIP containing image files'),
+			'#upload_validators' => [
+				'file_validate_extensions' => ['zip'],
+			],
+		];
+		$form['actions']['#type'] = 'actions';
+		$form['actions']['submit'] = [
+			'#type' => 'submit',
+			'#value' => $this->t('Upload'),
+			'#button_type' => 'primary',
+		];
+		return $form;
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function submitForm(array &$form, FormStateInterface $form_state) {
+		$fid = $form_state->getValue(['zip', 0]);
+		$field = $form_state->getValue('target_field');
+		$bundle = $form_state->getValue('target_bundle');
+		if (!empty($fid)) {
+			$file = File::load($fid);
+			try {
+				$media = $this->uploadService->uploadMedia('temporary://' . $this->getFormId() . '/', $file, $bundle, $field);
+				drupal_set_message($this->t('Success. Saved :size media entities.', [':size' => count($media)]));
+			} catch (Exception $e) {
+				drupal_set_message($e->getMessage());
 			}
 		}
-		file_unmanaged_delete_recursive($base_path);
-		return $uploaded_files;
 	}
 
 }

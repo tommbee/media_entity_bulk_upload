@@ -5,3 +5,4 @@ type: module
 core: 8.x
 dependencies:
   - system (>=8.4)
+  - drupal:media

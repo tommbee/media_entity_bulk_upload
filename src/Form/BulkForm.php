@@ -93,7 +93,7 @@ class BulkForm extends FormBase {
       $file = File::load($fid);
       try {
         $media = $this->uploadService->uploadMedia('temporary://' . $this->getFormId() . '/', $file, $bundle, $field);
-        drupal_set_message($this->t('Success. Saved @size media entities.', ['size' => count($media)]));
+        drupal_set_message($this->t('Success. Saved :size media entities.', [':size' => count($media)]));
       }
       catch (Exception $e) {
         drupal_set_message($e->getMessage());

@@ -3,11 +3,11 @@
 namespace Drupal\Tests\media_entity_bulk_upload\Unit;
 
 use Drupal\media_entity_bulk_upload\Utility\FieldUtility;
-use Drupal\Tests\UnitTestCase;
+use PHPUnit\Framework\TestCase;
 
-class FieldEntityTest extends UnitTestCase {
+class FieldEntityTest extends TestCase {
 
-	public function testReturnBundlesArray() {
+	public function testTrueIsTrue() {
 		$bundles = FieldUtility::getMediaFieldBundles();
 		$this->assertTrue(is_array($bundles));
 	}

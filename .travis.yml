@@ -49,18 +49,18 @@ env:
 
     # === Behat specific variables.
     # This is relative to $TRAVIS_BUILD_DIR
-    - DRUPAL_TI_BEHAT_DIR="./tests/behat"
+    #- DRUPAL_TI_BEHAT_DIR="./tests/behat"
     # These arguments are passed to the bin/behat command.
-    - DRUPAL_TI_BEHAT_ARGS=""
+    #- DRUPAL_TI_BEHAT_ARGS=""
     # Specify the filename of the behat.yml with the $DRUPAL_TI_DRUPAL_DIR variables.
-    - DRUPAL_TI_BEHAT_YML="behat.yml.dist"
+    #- DRUPAL_TI_BEHAT_YML="behat.yml.dist"
     # This is used to setup Xvfb.
-    - DRUPAL_TI_BEHAT_SCREENSIZE_COLOR="1280x1024x16"
+    #- DRUPAL_TI_BEHAT_SCREENSIZE_COLOR="1280x1024x16"
     # The version of selenium that should be used.
-    - DRUPAL_TI_BEHAT_SELENIUM_VERSION="2.48.2"
+    #- DRUPAL_TI_BEHAT_SELENIUM_VERSION="2.48.2"
     # Set DRUPAL_TI_BEHAT_DRIVER to "selenium" to use "firefox" or "chrome" here.
-    - DRUPAL_TI_BEHAT_DRIVER="phantomjs"
-    - DRUPAL_TI_BEHAT_BROWSER="firefox"
+    #- DRUPAL_TI_BEHAT_DRIVER="phantomjs"
+    #- DRUPAL_TI_BEHAT_BROWSER="firefox"
 
     # PHPUnit specific commandline arguments.
     - DRUPAL_TI_PHPUNIT_ARGS=""
@@ -70,9 +70,9 @@ env:
     #- DRUPAL_TI_PHPUNIT_CORE_SRC_DIRECTORY="./tests/src"
 
     # Code coverage via coveralls.io
-    - DRUPAL_TI_COVERAGE="satooshi/php-coveralls:0.6.*"
+    #- DRUPAL_TI_COVERAGE="satooshi/php-coveralls:0.6.*"
     # This needs to match your .coveralls.yml file.
-    - DRUPAL_TI_COVERAGE_FILE="build/logs/clover.xml"
+    #- DRUPAL_TI_COVERAGE_FILE="build/logs/clover.xml"
 
     # Debug options
     #- DRUPAL_TI_DEBUG="-x -v"

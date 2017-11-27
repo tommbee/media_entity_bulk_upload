@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/tommbee/media_entity_bulk_upload.svg)](https://travis-ci.org/tommbee/media_entity_bulk_upload)
 # Bulk Uploader For Media Entities
 A Drupal module to bulk upload image files and create media entities for use within your site.
 

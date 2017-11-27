@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\media_entity_bulk_upload\Unit;
+namespace media_entity_bulk_upload\Test;
 
 class FieldEntityTest extends \PHPUnit_Framework_TestCase {
 
